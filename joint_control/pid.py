@@ -53,7 +53,14 @@ class PIDController(object):
         @return control signal
         '''
         # YOUR CODE HERE
-
+        
+        error = target - sensor
+        for i in range(0, len(target)):
+            self.u[i] = self.u[i] + (self.Kp + self.Ki*self.dt + self.Kd/self.dt)*error[i] - (self.Kp + 2*self.Kd/self.dt)*self.e1[i] + self.Kd/self.dt*self.e2[i]
+            
+        self.e2 = self.e1
+        self.e1 = error
+                
         return self.u
 
 
