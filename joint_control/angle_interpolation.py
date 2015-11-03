@@ -21,7 +21,8 @@
 
 
 from pid import PIDAgent
-from keyframes import hello
+from keyframes import hello, wipe_forehead
+from spark_agent import JOINT_CMD_NAMES
 
 
 class AngleInterpolationAgent(PIDAgent):
@@ -32,16 +33,38 @@ class AngleInterpolationAgent(PIDAgent):
                  sync_mode=True):
         super(AngleInterpolationAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.keyframes = ([], [], [])
+        
+        # track elapsed time
+        self.et = 0.0
 
     def think(self, perception):
         target_joints = self.angle_interpolation(self.keyframes)
         self.target_joints.update(target_joints)
-        return super(PIDAgent, self).think(perception)
+        return super(AngleInterpolationAgent, self).think(perception)
 
     def angle_interpolation(self, keyframes):
         target_joints = {}
         # YOUR CODE HERE
-
+        
+        self.et += self.joint_controller.dt
+        
+        names, times, totalKeys = keyframes
+        
+        for i in range(0, len(names)):
+            if names[i] in JOINT_CMD_NAMES:
+                name = names[i]
+                time = times[i]
+                keys = totalKeys[i]
+                if self.et < time[0]:
+                    target_joints[name] = keys[0][0]
+                else:
+                    # find relevant keyframe
+                    for j in range(0, len(time)-1):
+                        if time[j] < self.et < time[j+1]:
+                            target_joints[name] = keys[j][0]
+                    # TODO: implement
+                    pass
+        
         return target_joints
 
 if __name__ == '__main__':
