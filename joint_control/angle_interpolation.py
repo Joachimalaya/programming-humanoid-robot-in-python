@@ -25,6 +25,7 @@ from keyframes import hello, wipe_forehead
 from spark_agent import JOINT_CMD_NAMES
 
 
+
 class AngleInterpolationAgent(PIDAgent):
     def __init__(self, simspark_ip='localhost',
                  simspark_port=3100,
@@ -55,17 +56,33 @@ class AngleInterpolationAgent(PIDAgent):
                 name = names[i]
                 time = times[i]
                 keys = totalKeys[i]
-                if self.et < time[0]:
-                    target_joints[name] = keys[0][0]
-                else:
-                    # find relevant keyframe
-                    for j in range(0, len(time)-1):
-                        if time[j] < self.et < time[j+1]:
-                            target_joints[name] = keys[j][0]
-                    # TODO: implement
-                    pass
-        
+                # find relevant keyframe
+                for j in range(0, len(time)-2):
+                    if time[j] < self.et < time[j+1]:
+                        # target_joints[name] = keys[j][0]
+                        # cubic spline interpolation to get started
+                        normalizedTimes = normalizeTimes(time)
+                        a = keys[j-1][0]
+                        b = keys[j][0]
+                        c = keys[j+1][0]
+                        d = keys[j+2][0]
+                        
+                        t0 = time[j-1]
+                        tEnd = time[j+2]
+                        
+                        tRel = (self.et - t0)/(tEnd - t0)
+                        
+                        target_joints[name] = a*tRel**3 + b*tRel**2 + c*tRel + d
+                            
         return target_joints
+
+def normalizeTimes(times):
+    largest = times[-1]
+    normalizedTimes = []
+    for t in times:
+        normalizedTimes.append(t / largest)
+        
+    return normalizedTimes
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
