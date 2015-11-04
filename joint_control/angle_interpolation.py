@@ -22,7 +22,7 @@
 
 from pid import PIDAgent
 from keyframes import hello, wipe_forehead
-from spark_agent import JOINT_CMD_NAMES
+from spark_agent import JOINT_CMD_NAMES, INVERSED_JOINTS
 
 
 
@@ -57,14 +57,13 @@ class AngleInterpolationAgent(PIDAgent):
                 time = times[i]
                 keys = totalKeys[i]
                 # find relevant keyframe
-                for j in range(0, len(time)-1):
-                    if time[j] < self.et < time[j+1]:
-                        # target_joints[name] = keys[j][0]
+                for j in range(0, len(time)):
+                    if time[j] < self.et < time[(j+1) % len(time)]:
                         # Bezier-interpolation as modified cubic spline
                         a = keys[j][0]
-                        b = keys[j][2][1]
-                        c = keys[j+1][0]
-                        d = keys[j+1][1][1]
+                        b = a + keys[j][2][1]
+                        d = keys[(j+1) % len(time)][0]
+                        c = d + keys[(j+1) % len(time)][1][1]
                         
                         t0 = time[j]
                         tEnd = time[j+1]
@@ -72,7 +71,14 @@ class AngleInterpolationAgent(PIDAgent):
                         t = (self.et - t0)/(tEnd - t0)
                         
                         target_joints[name] = (1-t)**3*a + 3*(1-t)**2*t*b + 3*(1-t)*t**2*c + t**3*d
-                            
+                        if name in INVERSED_JOINTS:
+                            target_joints[name] = -target_joints[name]
+                        
+                        
+        # restart timer
+        if self.et > 6.0:
+            self.et = 0
+            
         return target_joints
 
 if __name__ == '__main__':
