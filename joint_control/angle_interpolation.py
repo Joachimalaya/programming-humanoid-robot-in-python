@@ -73,6 +73,7 @@ class AngleInterpolationAgent(PIDAgent):
                         tRel = (self.et - t0)/(tEnd - t0)
                         
                         target_joints[name] = a*tRel**3 + b*tRel**2 + c*tRel + d
+                        # NOTE: not entirely wrong, but definitely not complete
                             
         return target_joints
 
