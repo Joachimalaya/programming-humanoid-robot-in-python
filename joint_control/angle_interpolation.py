@@ -22,7 +22,7 @@
 
 from pid import PIDAgent
 from keyframes import hello, wipe_forehead
-from spark_agent import JOINT_CMD_NAMES
+from spark_agent import JOINT_CMD_NAMES, INVERSED_JOINTS
 
 
 
@@ -57,35 +57,32 @@ class AngleInterpolationAgent(PIDAgent):
                 time = times[i]
                 keys = totalKeys[i]
                 # find relevant keyframe
-                for j in range(0, len(time)-2):
-                    if time[j] < self.et < time[j+1]:
-                        # target_joints[name] = keys[j][0]
-                        # cubic spline interpolation to get started
-                        normalizedTimes = normalizeTimes(time)
-                        a = keys[j-1][0]
-                        b = keys[j][0]
-                        c = keys[j+1][0]
-                        d = keys[j+2][0]
+                for j in range(0, len(time)):
+                    if time[j] < self.et < time[(j+1) % len(time)]:
+                        # Bezier-interpolation as modified cubic spline
+                        a = keys[j][0]
+                        b = a + keys[j][2][1]
+                        d = keys[(j+1) % len(time)][0]
+                        c = d + keys[(j+1) % len(time)][1][1]
                         
-                        t0 = time[j-1]
-                        tEnd = time[j+2]
+                        t0 = time[j]
+                        tEnd = time[j+1]
                         
-                        tRel = (self.et - t0)/(tEnd - t0)
+                        t = (self.et - t0)/(tEnd - t0)
                         
-                        target_joints[name] = a*tRel**3 + b*tRel**2 + c*tRel + d
-                        # NOTE: not entirely wrong, but definitely not complete
-                            
-        return target_joints
-
-def normalizeTimes(times):
-    largest = times[-1]
-    normalizedTimes = []
-    for t in times:
-        normalizedTimes.append(t / largest)
+                        target_joints[name] = (1-t)**3*a + 3*(1-t)**2*t*b + 3*(1-t)*t**2*c + t**3*d
+                        if name in INVERSED_JOINTS:
+                            target_joints[name] = -target_joints[name]
+                        
+                        
+        # restart timer
+        if self.et > 6.0:
+            self.et = 0
         
-    return normalizedTimes
+        return target_joints
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
     agent.keyframes = hello()  # CHANGE DIFFERENT KEYFRAMES
+    #agent.keyframes = wipe_forehead("bla")
     agent.run()
